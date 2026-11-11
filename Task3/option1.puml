@@ -1,0 +1,35 @@
+@startuml option1
+
+!include <C4/C4_Container>
+
+title Вариант 1: оркестратор внутри Payment Service
+
+Person(client, "Клиент")
+Person(operator, "Оператор", "Ручная проверка")
+Person(viewers, "Бизнес, безопасность, поддержка")
+
+System_Ext(bank, "Банк", "Операции с деньгами")
+System_Ext(aml, "AML")
+System_Ext(security, "Система безопасности")
+
+System_Boundary(op, "OrchestrPay") {
+  Container(payment, "Payment Service", "Camunda встроена как библиотека", "Платежи и процесс Saga в одном сервисе + сервисы Camunda")
+  ContainerDb(payment_db, "PostgreSQL Payment Service", "PostgreSQL", "Платежи и таблицы движка (состояние Saga процесса)")
+  ContainerDb(redis, "Redis", "Redis", "Кеш результатов проверок")
+  Container(fraud, "FraudCheck Service", "", "Антифрод и AML")
+  Container(notification, "Notification Service", "", "Уведомления клиенту и безопасности")
+}
+
+Rel_D(client, payment, "Платеж", "REST")
+Rel_D(operator, payment, "Решение по проверкам", "Tasklist")
+Rel_D(viewers, payment, "Просмотр статуса", "Cockpit")
+Rel_D(payment, payment_db, "Данные")
+Rel_D(fraud, redis, "Кеш")
+Rel_L(payment, fraud, "Проверки", "REST")
+Rel_D(payment, notification, "Уведомления", "REST")
+Rel_D(payment, bank, "Денежные операции", "REST")
+Rel_D(fraud, aml, "AML-проверки", "REST")
+Rel_D(notification, security, "Заблокированные операции")
+
+SHOW_LEGEND()
+@enduml

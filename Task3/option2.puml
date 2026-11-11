@@ -1,0 +1,40 @@
+@startuml option2
+
+!include <C4/C4_Container>
+
+title Вариант 2: отдельный сервис-оркестратор
+
+Person(client, "Клиент")
+Person(operator, "Оператор", "Ручная проверка")
+Person(viewers, "Бизнес, безопасность, поддержка")
+
+System_Ext(bank, "Банк", "Операции с деньгами")
+System_Ext(aml, "AML")
+System_Ext(security, "Система безопасности")
+
+System_Boundary(op, "OrchestrPay") {
+  Container(orch, "Payment Orchestrator", "Camunda", "Процесс Saga + сервисы Camunda")
+  ContainerDb(orch_db, "PostgreSQL оркестратора", "PostgreSQL", "Таблицы движка (состояние Saga процесса)")
+  ContainerDb(redis, "Redis", "Redis", "Кеш результатов проверок")
+  Container(payment, "Payment Service", "External Task worker", "Платежи и операции с деньгами")
+  ContainerDb(payment_db, "PostgreSQL Payment Service", "PostgreSQL", "Платежи")
+  Container(fraud, "FraudCheck Service", "External Task worker", "Антифрод и AML")
+  Container(notification, "Notification Service", "External Task worker", "Уведомления клиенту и безопасности")
+}
+
+Rel_D(client, payment, "Платеж", "REST")
+Rel_R(payment, orch, "Запуск процесса", "REST")
+Rel_D(operator, orch, "Решение по проверкам", "Tasklist")
+Rel_D(viewers, orch, "Просмотр статуса", "Cockpit")
+Rel_D(orch, orch_db, "Данные")
+Rel_D(fraud, redis, "Кеш")
+Rel_U(fraud, orch, "Задачи", "External Task")
+Rel_U(notification, orch, "Задачи", "External Task")
+Rel(payment, orch, "Задачи", "External Task")
+Rel_D(payment, payment_db, "Данные")
+Rel_D(payment, bank, "Денежные операции", "REST")
+Rel_D(fraud, aml, "AML-проверки", "REST")
+Rel_D(notification, security, "Заблокированные операции")
+
+SHOW_LEGEND()
+@enduml
